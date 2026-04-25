@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HairShape AI — Find Your Perfect Cut</title>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Sora:wght@300;400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0C0B09;--sf:#141310;--sf2:#1C1A17;--sf3:#242118;
+  --bd:rgba(255,255,255,0.07);--bd2:rgba(255,255,255,0.13);--bd3:rgba(255,255,255,0.22);
+  --tx:#F0EBE0;--mu:#8A8070;--mu2:#5A5248;
+  --gold:#C9A84C;--gdim:rgba(201,168,76,0.14);--gbright:#E0C068;
+  --teal:#4DB8A8;--tdim:rgba(77,184,168,0.13);
+  --rose:#C4706A;--rdim:rgba(196,112,106,0.13);
+  --blue:#5B8FD4;--bdim2:rgba(91,143,212,0.13);
+  --green:#6A9E6A;--grdim:rgba(106,158,106,0.13);
+}
+html{scroll-behavior:smooth}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden;cursor:default}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--sf2);border-radius:3px}
+
+/* ── HEADER ── */
+header{position:sticky;top:0;z-index:200;background:rgba(12,11,9,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0.9rem 2rem;gap:1rem}
+.logo{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;white-space:nowrap;flex-shrink:0}
+.logo em{color:var(--gold);font-style:italic}
+.logo-badge{font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;background:var(--gdim);border:1px solid rgba(201,168,76,0.25);color:var(--gold);padding:0.2rem 0.55rem;border-radius:2rem;margin-left:0.5rem;vertical-align:middle}
+.nav{display:flex;align-items:center;gap:0.25rem}
+.nav-btn{font-family:'Sora',sans-serif;font-size:0.78rem;color:var(--mu);background:none;border:none;cursor:pointer;padding:0.45rem 0.75rem;border-radius:0.4rem;transition:all 0.2s;white-space:nowrap}
+.nav-btn:hover{color:var(--tx);background:var(--sf2)}
+.nav-btn.active{color:var(--tx)}
+.header-right{display:flex;align-items:center;gap:0.6rem;flex-shrink:0}
+.btn-xs{font-family:'Sora',sans-serif;font-size:0.75rem;font-weight:500;padding:0.45rem 0.9rem;border-radius:0.4rem;cursor:pointer;transition:all 0.2s;white-space:nowrap}
+.btn-xs-ghost{background:transparent;color:var(--mu);border:1px solid var(--bd2)}
+.btn-xs-ghost:hover{background:var(--sf2);color:var(--tx)}
+.btn-xs-gold{background:var(--gold);color:#0C0B09;border:none}
+.btn-xs-gold:hover{background:var(--gbright)}
+.user-chip{display:flex;align-items:center;gap:0.5rem;background:var(--sf2);border:1px solid var(--bd2);border-radius:2rem;padding:0.3rem 0.75rem 0.3rem 0.3rem;cursor:pointer;font-size:0.78rem;color:var(--tx);transition:all 0.2s}
+.user-chip:hover{border-color:var(--bd3)}
+.avatar{width:24px;height:24px;border-radius:50%;background:var(--gdim);border:1px solid rgba(201,168,76,0.3);display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:var(--gold);font-weight:600;flex-shrink:0}
+
+/* ── PAGES ── */
+.page{display:none}.page.active{display:block}
+
+/* ── TABS ── */
+.tabs{display:flex;background:var(--sf);border-bottom:1px solid var(--bd);position:sticky;top:59px;z-index:190;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;padding:0.75rem 1.1rem;font-family:'Sora',sans-serif;font-size:0.72rem;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--mu);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;background:none;border-top:none;border-left:none;border-right:none;white-space:nowrap}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.tab:hover:not(.active){color:var(--tx)}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(6px)}
+.modal-bg.open{display:flex}
+.modal{background:var(--sf);border:1px solid var(--bd2);border-radius:1.25rem;width:100%;max-width:400px;overflow:hidden;animation:modalIn 0.25s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(0.97) translateY(8px)}to{opacity:1;transform:none}}
+.modal-hd{padding:1.25rem 1.5rem;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.modal-hd h3{font-family:'Playfair Display',serif;font-size:1.25rem}
+.modal-x{background:none;border:none;color:var(--mu);cursor:pointer;font-size:1.1rem;padding:0.25rem;line-height:1;border-radius:0.3rem;transition:all 0.2s}
+.modal-x:hover{color:var(--tx);background:var(--sf2)}
+.modal-bd{padding:1.5rem}
+.mtabs{display:flex;gap:0;border-bottom:1px solid var(--bd);margin-bottom:1.25rem}
+.mtab{flex:1;padding:0.6rem;font-family:'Sora',sans-serif;font-size:0.78rem;color:var(--mu);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all 0.2s}
+.mtab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.fld{margin-bottom:1rem}
+.fld label{display:block;font-size:0.66rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--mu);margin-bottom:0.4rem}
+.fld input{width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:0.5rem;padding:0.7rem 0.9rem;color:var(--tx);font-family:'Sora',sans-serif;font-size:0.86rem;transition:border-color 0.2s;outline:none}
+.fld input:focus{border-color:var(--gold)}
+.merr{color:var(--rose);font-size:0.78rem;min-height:1.1rem;margin-bottom:0.5rem}
+.btn-full{width:100%;padding:0.85rem;background:var(--gold);color:#0C0B09;border:none;border-radius:0.5rem;font-family:'Sora',sans-serif;font-size:0.88rem;font-weight:500;cursor:pointer;transition:all 0.2s}
+.btn-full:hover{background:var(--gbright)}
+.btn-full:disabled{opacity:0.4;cursor:not-allowed}
+.mfoot{text-align:center;margin-top:1rem;font-size:0.78rem;color:var(--mu)}
+.mfoot a{color:var(--gold);cursor:pointer}
+
+/* ── LANDING HERO ── */
+.hero{position:relative;text-align:center;padding:5rem 2rem 3rem;overflow:hidden}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 30%, rgba(201,168,76,0.045) 0%, transparent 70%);pointer-events:none}
+.hero-eyebrow{font-size:0.68rem;letter-spacing:0.28em;text-transform:uppercase;color:var(--gold);margin-bottom:1.25rem;animation:fadeUp 0.6s ease both 0.1s}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(2.6rem,6vw,5.2rem);font-weight:700;line-height:1.05;max-width:820px;margin:0 auto 1.25rem;animation:fadeUp 0.6s ease both 0.2s}
+.hero h1 em{color:var(--gold);font-style:italic}
+.hero-sub{font-size:0.98rem;font-weight:300;color:var(--mu);max-width:500px;margin:0 auto 2.5rem;line-height:1.8;animation:fadeUp 0.6s ease both 0.3s}
+.hero-cta{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;animation:fadeUp 0.6s ease both 0.4s}
+.hero-stats{display:flex;justify-content:center;gap:3rem;margin-top:4rem;padding-top:2rem;border-top:1px solid var(--bd);animation:fadeUp 0.6s ease both 0.5s;flex-wrap:wrap;gap:2rem}
+.stat-item{text-align:center}
+.stat-val{font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;color:var(--gold)}
+.stat-lbl{font-size:0.72rem;color:var(--mu);letter-spacing:0.08em;margin-top:0.2rem}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+
+/* ── BUTTONS ── */
+.btn-gold{padding:0.85rem 2rem;background:var(--gold);color:#0C0B09;border:none;border-radius:0.5rem;font-family:'Sora',sans-serif;font-size:0.88rem;font-weight:500;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:0.5rem}
+.btn-gold:hover{background:var(--gbright);transform:translateY(-1px)}
+.btn-outline{padding:0.85rem 2rem;background:transparent;color:var(--tx);border:1px solid var(--bd2);border-radius:0.5rem;font-family:'Sora',sans-serif;font-size:0.88rem;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:0.5rem}
+.btn-outline:hover{background:var(--sf2);border-color:var(--bd3)}
+
+/* ── SCAN LAYOUT ── */
+.scan-wrap{max-width:1200px;margin:0 auto;padding:0 1.5rem 4rem;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,0.85fr);gap:2rem;align-items:start}
+@media(max-width:860px){.scan-wrap{grid-template-columns:1fr}}
+
+/* ── CAMERA BOX ── */
+.cam-box{background:var(--sf);border:1px solid var(--bd);border-radius:1.25rem;overflow:hidden}
+.cam-bar{padding:0.85rem 1.25rem;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.cam-lbl{font-size:0.68rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--mu)}
+.cam-st{display:flex;align-items:center;gap:0.5rem;font-size:0.7rem;color:var(--mu)}
+.dot{width:7px;height:7px;border-radius:50%;background:#2a2824;flex-shrink:0}
+.dot.live{background:#5C9E5C;animation:blink 2s ease-in-out infinite}
+.dot.busy{background:var(--gold);animation:blink 0.65s ease-in-out infinite}
+.dot.done{background:var(--teal)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+.vid-wrap{position:relative;aspect-ratio:4/3;background:#060504;overflow:hidden}
+#videoEl{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:none}
+#overlayCanvas{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);pointer-events:none}
+#capturedImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:none}
+#arCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;display:none}
+.vid-ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem}
+.cam-ring{width:68px;height:68px;border-radius:50%;border:1px solid var(--bd2);display:flex;align-items:center;justify-content:center}
+.cam-ring svg{width:30px;height:30px;stroke:var(--mu);fill:none;stroke-width:1.5}
+.vid-ph p{font-size:0.78rem;color:var(--mu);text-align:center;max-width:210px;line-height:1.65}
+.scanline{position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:scanAnim 2.6s linear infinite;display:none;opacity:0.55}
+.scanline.on{display:block}
+@keyframes scanAnim{from{top:0}to{top:100%}}
+.live-tag{position:absolute;bottom:10px;left:10px;background:rgba(12,11,9,0.88);border:1px solid var(--gold);color:var(--gold);font-size:0.66rem;letter-spacing:0.08em;text-transform:uppercase;padding:0.22rem 0.6rem;border-radius:2rem;display:none;backdrop-filter:blur(8px)}
+.live-tag.on{display:block}
+.ar-controls{position:absolute;top:10px;right:10px;display:none;flex-direction:column;gap:0.4rem}
+.ar-controls.on{display:flex}
+.ar-btn{background:rgba(12,11,9,0.88);border:1px solid var(--bd2);color:var(--mu);font-family:'Sora',sans-serif;font-size:0.65rem;padding:0.3rem 0.6rem;border-radius:0.35rem;cursor:pointer;transition:all 0.2s;backdrop-filter:blur(8px);white-space:nowrap}
+.ar-btn.active{border-color:var(--gold);color:var(--gold)}
+.ar-btn:hover{color:var(--tx)}
+.cover{position:absolute;inset:0;background:rgba(8,7,6,0.78);display:none;flex-direction:column;align-items:center;justify-content:center;gap:1rem;backdrop-filter:blur(3px)}
+.cover.on{display:flex}
+.spinner{width:40px;height:40px;border:2px solid rgba(201,168,76,0.18);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cstep{font-size:0.76rem;color:var(--gold);letter-spacing:0.06em;text-align:center;padding:0 1rem}
+.stgl{display:flex;border-top:1px solid var(--bd)}
+.stgl button{flex:1;padding:0.52rem 0.4rem;font-family:'Sora',sans-serif;font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase;background:none;border:none;border-right:1px solid var(--bd);color:var(--mu);cursor:pointer;transition:all 0.2s}
+.stgl button:last-child{border-right:none}
+.stgl button.active{background:var(--gdim);color:var(--gold)}
+.cam-btns{padding:1rem 1.25rem;display:flex;gap:0.75rem;border-top:1px solid var(--bd)}
+.cbtn{flex:1;padding:0.68rem 1rem;border-radius:0.5rem;font-family:'Sora',sans-serif;font-size:0.8rem;font-weight:500;cursor:pointer;border:none;transition:all 0.2s;letter-spacing:0.02em}
+.cbtn-p{background:var(--gold);color:#0C0B09}.cbtn-p:hover{background:var(--gbright)}
+.cbtn-s{background:var(--sf2);color:var(--tx);border:1px solid var(--bd)}.cbtn-s:hover{background:var(--sf3)}
+.cbtn:disabled{opacity:0.32;cursor:not-allowed;transform:none!important}
+
+/* ── RESULTS COL ── */
+.res-col{display:flex;flex-direction:column;gap:1.1rem}
+.rcard{background:var(--sf);border:1px solid var(--bd);border-radius:1.25rem;overflow:hidden;opacity:0;transform:translateY(8px);transition:opacity 0.45s,transform 0.45s}
+.rcard.in{opacity:1;transform:none}
+.rcard-hd{padding:0.9rem 1.25rem;border-bottom:1px solid var(--bd);font-size:0.63rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--mu)}
+.shape-row{padding:1.35rem 1.25rem;display:flex;align-items:center;gap:1.25rem}
+.shape-ico{width:56px;height:56px;background:var(--gdim);border:1px solid rgba(201,168,76,0.2);border-radius:0.7rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.shape-ico svg{width:34px;height:34px}
+.shape-name{font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;line-height:1}
+.shape-sub{font-size:0.76rem;color:var(--mu);margin-top:0.3rem}
+.shape-desc{padding:0 1.25rem 1.25rem;font-size:0.82rem;color:var(--mu);line-height:1.75;border-bottom:1px solid var(--bd)}
+.mrow{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--bd)}
+.mcell{padding:0.85rem 0.4rem;text-align:center;border-right:1px solid var(--bd)}
+.mcell:last-child{border-right:none}
+.mval{font-size:0.92rem;font-weight:500}
+.mlbl{font-size:0.58rem;color:var(--mu);margin-top:0.2rem;letter-spacing:0.06em;text-transform:uppercase}
+.conf-row{padding:0.85rem 1.25rem;display:flex;align-items:center;gap:0.75rem}
+.conf-lbl{font-size:0.68rem;color:var(--mu);white-space:nowrap}
+.btrack{flex:1;height:3px;background:var(--sf2);border-radius:2px;overflow:hidden}
+.bfill{height:100%;background:var(--gold);border-radius:2px;width:0;transition:width 1.2s ease}
+.cpct{font-size:0.68rem;font-weight:500;color:var(--gold);min-width:30px;text-align:right}
+.rec-item{padding:0.95rem 1.25rem;border-bottom:1px solid var(--bd);display:flex;gap:0.9rem;align-items:flex-start;cursor:pointer;transition:background 0.15s}
+.rec-item:last-child{border-bottom:none}
+.rec-item:hover{background:var(--sf2)}
+.rec-rank{font-size:0.65rem;color:var(--gold);font-weight:500;min-width:18px;margin-top:2px;flex-shrink:0}
+.rec-body{flex:1;min-width:0}
+.rec-name{font-size:0.88rem;font-weight:500;margin-bottom:0.22rem}
+.rec-why{font-size:0.76rem;color:var(--mu);line-height:1.55}
+.rec-thumb{width:56px;height:56px;border-radius:0.45rem;object-fit:cover;background:var(--sf2);flex-shrink:0;transition:transform 0.2s}
+.rec-item:hover .rec-thumb{transform:scale(1.04)}
+.badge{font-size:0.58rem;letter-spacing:0.08em;text-transform:uppercase;padding:0.18rem 0.5rem;border-radius:2rem;white-space:nowrap;align-self:flex-start;margin-top:2px;border:1px solid;flex-shrink:0}
+.badge-best{background:var(--gdim);color:var(--gold);border-color:rgba(201,168,76,0.28)}
+.badge-good{background:var(--sf2);color:var(--mu);border-color:var(--bd)}
+.avoid-wrap{padding:1.25rem}
+.avoid-lbl{font-size:0.63rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--rose);margin-bottom:0.7rem}
+.avoid-chips{display:flex;flex-wrap:wrap;gap:0.45rem}
+.avoid-chip{font-size:0.72rem;padding:0.26rem 0.68rem;background:var(--rdim);border:1px solid rgba(196,112,106,0.2);border-radius:2rem;color:var(--rose)}
+.tip-item{padding:0.8rem 1.25rem;border-bottom:1px solid var(--bd);display:flex;gap:0.7rem}
+.tip-item:last-child{border-bottom:none}
+.tdot{width:5px;height:5px;border-radius:50%;background:var(--teal);margin-top:6px;flex-shrink:0}
+.ttxt{font-size:0.78rem;color:var(--mu);line-height:1.6}
+.ttxt strong{color:var(--tx);font-weight:500}
+.empty{background:var(--sf);border:1px solid var(--bd);border-radius:1.25rem;padding:3.5rem 2rem;text-align:center}
+.empty-orn{font-family:'Playfair Display',serif;font-size:3.5rem;color:var(--bd2);line-height:1;margin-bottom:1rem;font-style:italic}
+.empty h3{font-family:'Playfair Display',serif;font-size:1.35rem;margin-bottom:0.6rem}
+.empty p{font-size:0.8rem;color:var(--mu);line-height:1.7;max-width:250px;margin:0 auto}
+
+/* ── COLOR SECTION ── */
+.color-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:0.75rem;padding:1.25rem}
+.color-swatch{border-radius:0.5rem;overflow:hidden;cursor:pointer;border:1px solid var(--bd);transition:all 0.2s}
+.color-swatch:hover{border-color:var(--bd3);transform:translateY(-2px)}
+.swatch-color{height:64px}
+.swatch-info{padding:0.5rem;background:var(--sf2)}
+.swatch-name{font-size:0.72rem;font-weight:500;color:var(--tx)}
+.swatch-type{font-size:0.62rem;color:var(--mu);margin-top:0.1rem}
+
+/* ── CELEB SECTION ── */
+.celeb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem;padding:1.25rem}
+.celeb-card{border-radius:0.75rem;overflow:hidden;background:var(--sf2);border:1px solid var(--bd);cursor:pointer;transition:all 0.2s}
+.celeb-card:hover{border-color:var(--bd3);transform:translateY(-2px)}
+.celeb-img-wrap{aspect-ratio:3/4;overflow:hidden;background:var(--sf3);display:flex;align-items:center;justify-content:center;font-size:3rem}
+.celeb-img-wrap img{width:100%;height:100%;object-fit:cover}
+.celeb-info{padding:0.6rem 0.75rem}
+.celeb-name{font-size:0.78rem;font-weight:500;color:var(--tx)}
+.celeb-shape{font-size:0.66rem;color:var(--gold);margin-top:0.15rem}
+
+/* ── QUIZ ── */
+.quiz-wrap{max-width:680px;margin:0 auto;padding:2rem 1.5rem 4rem}
+.quiz-progress{display:flex;gap:0.35rem;margin-bottom:2rem}
+.qpip{flex:1;height:3px;background:var(--sf2);border-radius:2px;transition:background 0.3s}
+.qpip.done{background:var(--gold)}
+.qpip.active{background:rgba(201,168,76,0.5)}
+.quiz-card{background:var(--sf);border:1px solid var(--bd);border-radius:1.25rem;padding:2rem;animation:fadeUp 0.3s ease}
+.quiz-q-num{font-size:0.65rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--mu);margin-bottom:1rem}
+.quiz-q{font-family:'Playfair Display',serif;font-size:1.5rem;line-height:1.3;margin-bottom:1.75rem}
+.quiz-opts{display:flex;flex-direction:column;gap:0.6rem}
+.qopt{padding:1rem 1.25rem;background:var(--sf2);border:1px solid var(--bd);border-radius:0.75rem;cursor:pointer;transition:all 0.2s;font-size:0.88rem;color:var(--tx);text-align:left}
+.qopt:hover{border-color:var(--bd2);background:var(--sf3)}
+.qopt.selected{border-color:var(--gold);background:var(--gdim);color:var(--gold)}
+.quiz-nav{display:flex;justify-content:space-between;margin-top:1.75rem;gap:1rem}
+
+/* ── GALLERY ── */
+.gallery-section{max-width:1100px;margin:0 auto;padding:2rem 1.5rem 4rem}
+.gallery-filters{display:flex;gap:0.5rem;margin-bottom:1.75rem;flex-wrap:wrap}
+.filter-chip{font-size:0.72rem;padding:0.35rem 0.8rem;border-radius:2rem;border:1px solid var(--bd);background:transparent;color:var(--mu);cursor:pointer;transition:all 0.2s;font-family:'Sora',sans-serif}
+.filter-chip.active,.filter-chip:hover{border-color:var(--gold);color:var(--gold);background:var(--gdim)}
+.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}
+.gcard{border-radius:1rem;overflow:hidden;background:var(--sf);border:1px solid var(--bd);cursor:pointer;transition:all 0.2s}
+.gcard:hover{border-color:var(--bd2);transform:translateY(-3px)}
+.gcard-img{aspect-ratio:3/4;overflow:hidden;background:var(--sf2);position:relative}
+.gcard-img img{width:100%;height:100%;object-fit:cover;transition:transform 0.4s}
+.gcard:hover .gcard-img img{transform:scale(1.04)}
+.gcard-img-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:3rem;color:var(--bd2);font-style:italic;background:linear-gradient(90deg,var(--sf2) 25%,var(--sf3) 50%,var(--sf2) 75%);background-size:200% 100%;animation:shimmer 1.6s infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.rec-thumb-ph{width:56px;height:56px;border-radius:0.45rem;background:linear-gradient(90deg,var(--sf2) 25%,var(--sf3) 50%,var(--sf2) 75%);background-size:200% 100%;animation:shimmer 1.6s infinite;flex-shrink:0;font-size:0;color:transparent}
+.gcard-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(12,11,9,0.9));padding:1rem 0.85rem 0.85rem;opacity:0;transition:opacity 0.2s}
+.gcard:hover .gcard-overlay{opacity:1}
+.gcard-overlay-name{font-size:0.78rem;font-weight:500;color:var(--tx)}
+.gcard-body{padding:0.85rem}
+.gcard-name{font-size:0.86rem;font-weight:500;margin-bottom:0.2rem}
+.gcard-tags{display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.4rem}
+.gtag{font-size:0.6rem;padding:0.15rem 0.45rem;background:var(--sf2);border-radius:2rem;color:var(--mu)}
+.gsave-btn{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;background:rgba(12,11,9,0.75);border:1px solid var(--bd2);color:var(--mu);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;transition:all 0.2s;backdrop-filter:blur(4px)}
+.gsave-btn:hover,.gsave-btn.saved{color:var(--rose)}
+
+/* ── LIGHTBOX ── */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:800;display:none;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(8px)}
+.lightbox.open{display:flex}
+.lb-inner{background:var(--sf);border-radius:1.25rem;max-width:900px;width:100%;max-height:90vh;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;animation:modalIn 0.25s ease}
+@media(max-width:640px){.lb-inner{grid-template-columns:1fr}}
+.lb-img{overflow:hidden;background:var(--sf2)}
+.lb-img img{width:100%;height:100%;object-fit:cover;max-height:500px}
+.lb-img-ph{width:100%;height:300px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:5rem;color:var(--bd2);font-style:italic}
+.lb-info{padding:2rem;overflow-y:auto;display:flex;flex-direction:column;gap:1.25rem}
+.lb-close{align-self:flex-end;background:none;border:none;color:var(--mu);cursor:pointer;font-size:1.2rem;padding:0.25rem;border-radius:0.3rem;transition:all 0.2s}
+.lb-close:hover{color:var(--tx);background:var(--sf2)}
+.lb-name{font-family:'Playfair Display',serif;font-size:1.75rem;font-weight:700}
+.lb-sub{font-size:0.78rem;color:var(--mu);line-height:1.6;margin-top:-0.5rem}
+.lb-shapes{display:flex;flex-wrap:wrap;gap:0.4rem}
+.lb-shape-pill{font-size:0.68rem;padding:0.22rem 0.6rem;background:var(--gdim);border:1px solid rgba(201,168,76,0.2);border-radius:2rem;color:var(--gold)}
+.lb-desc{font-size:0.84rem;color:var(--mu);line-height:1.75}
+.lb-credit{font-size:0.68rem;color:var(--mu2);border-top:1px solid var(--bd);padding-top:0.75rem;margin-top:auto}
+
+/* ── HISTORY PAGE ── */
+.hist-section{max-width:1100px;margin:0 auto;padding:2.5rem 1.5rem 4rem}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem}
+.ph h2{font-family:'Playfair Display',serif;font-size:1.8rem}
+.ph p{font-size:0.78rem;color:var(--mu);margin-top:0.2rem}
+.hist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1.1rem}
+.hcard{background:var(--sf);border:1px solid var(--bd);border-radius:1rem;overflow:hidden;transition:border-color 0.2s}
+.hcard:hover{border-color:var(--bd2)}
+.hthumb{aspect-ratio:4/3;background:var(--sf2);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.hthumb img{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.hph{font-family:'Playfair Display',serif;font-size:3rem;color:var(--bd2);font-style:italic}
+.hshape-tag{position:absolute;top:8px;left:8px;background:rgba(12,11,9,0.88);border:1px solid var(--gold);color:var(--gold);font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;padding:0.2rem 0.55rem;border-radius:2rem;backdrop-filter:blur(8px)}
+.hbody{padding:0.9rem 1rem}
+.hdate{font-size:0.66rem;color:var(--mu);margin-bottom:0.35rem}
+.hrecs{font-size:0.78rem;color:var(--tx);line-height:1.6}
+.hrecs strong{color:var(--gold)}
+.hactions{padding:0.6rem 1rem;border-top:1px solid var(--bd);display:flex;gap:0.45rem}
+.hbtn{flex:1;padding:0.42rem;font-family:'Sora',sans-serif;font-size:0.7rem;border-radius:0.35rem;cursor:pointer;border:1px solid var(--bd);background:transparent;color:var(--mu);transition:all 0.2s}
+.hbtn:hover{background:var(--sf2);color:var(--tx)}
+.hbtn.del:hover{background:var(--rdim);color:var(--rose);border-color:rgba(196,112,106,0.3)}
+.no-hist{grid-column:1/-1;padding:4rem 2rem;text-align:center;border:1px dashed var(--bd2);border-radius:1rem;color:var(--mu);font-size:0.85rem;line-height:1.7}
+.login-prompt{background:var(--gdim);border:1px solid rgba(201,168,76,0.18);border-radius:1rem;padding:1.75rem;text-align:center;margin-bottom:2rem}
+.login-prompt p{color:var(--mu);font-size:0.84rem;line-height:1.7;margin-bottom:1rem}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:2rem;right:2rem;background:var(--sf2);border:1px solid var(--bd2);border-radius:0.75rem;padding:0.82rem 1.1rem;font-size:0.8rem;color:var(--tx);z-index:999;transform:translateY(100px);opacity:0;transition:all 0.3s ease;display:flex;align-items:center;gap:0.65rem;max-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+.toast.show{transform:none;opacity:1}
+.tdot-sm{width:6px;height:6px;border-radius:50%;background:var(--gold);flex-shrink:0}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <div style="display:flex;align-items:center;gap:0.5rem">
+    <div class="logo">Hair<em>Shape</em> AI<span class="logo-badge">v2</span></div>
+  </div>
+  <nav class="nav" id="mainNav">
+    <button class="nav-btn active" onclick="switchPage('scan')">Scan</button>
+    <button class="nav-btn" onclick="switchPage('gallery')">Styles</button>
+    <button class="nav-btn" onclick="switchPage('quiz')">Quiz</button>
+    <button class="nav-btn" onclick="switchPage('history')">History</button>
+  </nav>
+  <div class="header-right" id="authArea">
+    <button class="btn-xs btn-xs-ghost" onclick="openModal('login')">Sign In</button>
+    <button class="btn-xs btn-xs-gold" onclick="openModal('register')">Create Account</button>
+  </div>
+</header>
+
+<!-- ── TABS ── -->
+<div class="tabs">
+  <button class="tab active" id="tab-scan" onclick="switchPage('scan')">Camera Scan</button>
+  <button class="tab" id="tab-gallery" onclick="switchPage('gallery')">Style Gallery</button>
+  <button class="tab" id="tab-quiz" onclick="switchPage('quiz')">Shape Quiz</button>
+  <button class="tab" id="tab-history" onclick="switchPage('history')">My History</button>
+</div>
+
+<!-- ════════ SCAN PAGE ════════ -->
+<div class="page active" id="page-scan">
+  <div class="hero">
+    <div class="hero-bg"></div>
+    <p class="hero-eyebrow">MediaPipe Face Mesh · Real-Time AI</p>
+    <h1>Your face. Your <em>perfect</em> cut.</h1>
+    <p class="hero-sub">468-point face mesh analysis maps your exact bone structure and recommends the most flattering hairstyles — personalized in seconds.</p>
+    <div class="hero-cta">
+      <button class="btn-gold" onclick="startCamera()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M6.343 6.343A8 8 0 1017.657 17.657M6.343 6.343A8 8 0 0017.657 17.657"/></svg>
+        Start Camera
+      </button>
+      <button class="btn-outline" onclick="switchPage('quiz')">Take the Quiz Instead</button>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-item"><div class="stat-val">6</div><div class="stat-lbl">Face Shapes</div></div>
+      <div class="stat-item"><div class="stat-val">468</div><div class="stat-lbl">Landmarks Mapped</div></div>
+      <div class="stat-item"><div class="stat-val">30+</div><div class="stat-lbl">Curated Styles</div></div>
+      <div class="stat-item"><div class="stat-val">100%</div><div class="stat-lbl">On-Device</div></div>
+    </div>
+  </div>
+
+  <div class="scan-wrap">
+    <div class="cam-box">
+      <div class="cam-bar">
+        <span class="cam-lbl">Live Camera · MediaPipe Face Mesh</span>
+        <div class="cam-st"><div class="dot" id="dot"></div><span id="stTxt">Inactive</span></div>
+      </div>
+      <div class="vid-wrap" id="vWrap">
+        <video id="videoEl" autoplay muted playsinline></video>
+        <canvas id="overlayCanvas"></canvas>
+        <canvas id="arCanvas"></canvas>
+        <img id="capturedImg" alt="Your face" />
+        <div class="vid-ph" id="vPh">
+          <div class="cam-ring"><svg viewBox="0 0 24 24"><path d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/><path d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/></svg></div>
+          <p>Click Start Camera and center your face in the oval guide</p>
+        </div>
+        <div class="scanline" id="scanline"></div>
+        <div class="live-tag" id="liveTag"></div>
+        <div class="ar-controls" id="arControls">
+          <button class="ar-btn active" onclick="setARMode('mesh',this)">Mesh</button>
+          <button class="ar-btn" onclick="setARMode('points',this)">Points</button>
+          <button class="ar-btn" onclick="setARMode('clean',this)">Clean</button>
+        </div>
+        <div class="cover" id="cover">
+          <div class="spinner"></div>
+          <div class="cstep" id="cstep">Initializing...</div>
+        </div>
+      </div>
+      <div class="stgl">
+        <button class="active" onclick="setSM('all',this)">All Styles</button>
+        <button onclick="setSM('men',this)">Masculine</button>
+        <button onclick="setSM('women',this)">Feminine</button>
+      </div>
+      <div class="cam-btns">
+        <button class="cbtn cbtn-p" id="startBtn" onclick="startCamera()">Start Camera</button>
+        <button class="cbtn cbtn-s" id="analyzeBtn" onclick="doAnalyze()" disabled>Analyze My Face</button>
+      </div>
+    </div>
+
+    <div class="res-col" id="resCol">
+      <div class="empty" id="emptyState">
+        <div class="empty-orn">✦</div>
+        <h3>Your results await</h3>
+        <p>Start the camera, center your face in the oval, then click Analyze. Or take the quiz if camera isn't available.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ GALLERY PAGE ════════ -->
+<div class="page" id="page-gallery">
+  <div class="gallery-section">
+    <div class="ph">
+      <div><h2>Style Gallery</h2><p id="galleryCount">Loading hairstyles...</p></div>
+    </div>
+    <div class="gallery-filters" id="galleryFilters">
+      <button class="filter-chip active" onclick="filterGallery('all',this)">All Shapes</button>
+      <button class="filter-chip" onclick="filterGallery('oval',this)">Oval</button>
+      <button class="filter-chip" onclick="filterGallery('round',this)">Round</button>
+      <button class="filter-chip" onclick="filterGallery('square',this)">Square</button>
+      <button class="filter-chip" onclick="filterGallery('heart',this)">Heart</button>
+      <button class="filter-chip" onclick="filterGallery('oblong',this)">Oblong</button>
+      <button class="filter-chip" onclick="filterGallery('diamond',this)">Diamond</button>
+    </div>
+    <div class="gallery-grid" id="galleryGrid"></div>
+  </div>
+</div>
+
+<!-- ════════ QUIZ PAGE ════════ -->
+<div class="page" id="page-quiz">
+  <div class="quiz-wrap">
+    <div class="quiz-progress" id="quizProgress"></div>
+    <div id="quizContent"></div>
+  </div>
+</div>
+
+<!-- ════════ HISTORY PAGE ════════ -->
+<div class="page" id="page-history">
+  <div class="hist-section">
+    <div class="ph">
+      <div><h2>Analysis History</h2><p id="histCount">0 saved analyses</p></div>
+      <button class="btn-outline" style="font-size:0.78rem;padding:0.55rem 1rem" onclick="clearHist()">Clear Local</button>
+    </div>
+    <div id="loginPrompt" style="display:none" class="login-prompt">
+      <p>Sign in to sync your analysis history across devices.</p>
+      <button class="btn-gold" onclick="openModal('login')" style="padding:0.6rem 1.5rem;font-size:0.85rem">Sign In to Sync</button>
+    </div>
+    <div class="hist-grid" id="histGrid"></div>
+  </div>
+</div>
+
+<!-- ── AUTH MODAL ── -->
+<div class="modal-bg" id="authModal">
+  <div class="modal">
+    <div class="modal-hd"><h3>Your Account</h3><button class="modal-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-bd">
+      <div class="mtabs">
+        <button class="mtab active" id="mt-login" onclick="swMTab('login')">Sign In</button>
+        <button class="mtab" id="mt-reg" onclick="swMTab('register')">Create Account</button>
+      </div>
+      <div id="mLoginForm">
+        <div class="fld"><label>Email</label><input type="email" id="lEmail" placeholder="you@example.com"></div>
+        <div class="fld"><label>Password</label><input type="password" id="lPwd" placeholder="••••••••"></div>
+        <div class="merr" id="lErr"></div>
+        <button class="btn-full" id="lBtn" onclick="doLogin()">Sign In</button>
+        <div class="mfoot">No account? <a onclick="swMTab('register')">Create one free</a></div>
+      </div>
+      <div id="mRegForm" style="display:none">
+        <div class="fld"><label>Your Name</label><input type="text" id="rName" placeholder="Alex Johnson"></div>
+        <div class="fld"><label>Email</label><input type="email" id="rEmail" placeholder="you@example.com"></div>
+        <div class="fld"><label>Password</label><input type="password" id="rPwd" placeholder="8+ characters"></div>
+        <div class="merr" id="rErr"></div>
+        <button class="btn-full" id="rBtn" onclick="doRegister()">Create Account</button>
+        <div class="mfoot">Have an account? <a onclick="swMTab('login')">Sign in</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── LIGHTBOX ── -->
+<div class="lightbox" id="lightbox" onclick="if(event.target===this)closeLightbox()">
+  <div class="lb-inner" id="lbInner"></div>
+</div>
+
+<div class="toast" id="toast"><div class="tdot-sm"></div><span id="toastMsg"></span></div>
+<canvas id="hidCanvas" style="display:none"></canvas>
+
+<script>
+const API = window.HAIRSHAPE_API_URL || 'http://localhost:3001/api';
+const BAKED_PHOTOS = {};
+
+let auth = { user: null, token: localStorage.getItem('hs_at'), refresh: localStorage.getItem('hs_rt') };
+let cameraLive = false, stream = null, faceMesh = null, mpCam = null;
+let lastLandmarks = null, currentResult = null;
+let styleMode = 'all', arMode = 'mesh';
+let savedStyles = new Set(JSON.parse(localStorage.getItem('hs_saved_styles') || '[]'));
+let galleryFilter = 'all';
+
+const S = {
+  oval:{name:'Oval',sub:'The most versatile face shape',desc:'Slightly longer than wide with a gently curved jawline. Almost every cut flatters this balanced shape.',svg:`<ellipse cx="19" cy="22" rx="10" ry="14" fill="none" stroke="#C9A84C" stroke-width="1.8"/>`,m:{Forehead:'1.00×',Cheeks:'1.05×',Jaw:'0.90×',Length:'1.35×'},celebs:['Beyoncé','George Clooney','Jessica Alba','Brad Pitt'],colors:['honey blonde','caramel highlights','warm brown','ash blonde'],recs:{all:[{n:'Textured Crop',w:'Adds interest without fighting your balanced proportions.',top:true},{n:'Curtain Bangs',w:'Frame the forehead beautifully without disrupting balance.',top:true},{n:'Long Layers',w:'Flows naturally with your shape and adds dimension.',top:false},{n:'Undercut Pompadour',w:'Clean sides let the oval shape speak for itself.',top:false},{n:'Beach Waves',w:'Effortlessly flattering at any length.',top:false}],men:[{n:'Textured Crop',w:'Clean, modern — works with any oval variation.',top:true},{n:'Buzz Cut',w:'Oval is one of few shapes that truly rocks this.',top:true},{n:'Classic Side Part',w:'Timeless and universally flattering on oval faces.',top:false}],women:[{n:'Curtain Bangs',w:'Frame your forehead and softens the silhouette.',top:true},{n:'Long Layers',w:'Movement and dimension with your natural balance.',top:true},{n:'Lob',w:'Hits at the perfect length to showcase your structure.',top:false}]},avoid:['Overly flat styles','Heavy one-length bobs'],tips:[{b:'Any length works',t:' — from buzz to waist, your proportions support everything.'},{b:'Asymmetry flatters',t:' — try side parts and swept styles for extra interest.'},{b:'Curtain bangs are made for you',t:' — they frame without disrupting balance.'}]},
+  round:{name:'Round',sub:'Soft curves, full cheeks',desc:'Similar width and length with a soft jawline. The goal is to create length and reduce horizontal width.',svg:`<circle cx="19" cy="20" r="13" fill="none" stroke="#C9A84C" stroke-width="1.8"/>`,m:{Forehead:'1.00×',Cheeks:'1.05×',Jaw:'0.95×',Length:'1.05×'},celebs:['Chrissy Teigen','Leonardo DiCaprio','Selena Gomez','Jack Black'],colors:['dimensional highlights','cool brunette','ombre','face-framing babylights'],recs:{all:[{n:'High Volume Quiff',w:'Height on top elongates the face upward.',top:true},{n:'Side-Swept Long Layers',w:'Diagonal lines add the illusion of length.',top:true},{n:'Deep Side Part',w:'Asymmetry powerfully counteracts circular proportions.',top:false},{n:'Straight Long Hair',w:'Length past the chin visually extends the face.',top:false}],men:[{n:'High Fade + Textured Top',w:'Tight sides and tall top is the ideal contrast.',top:true},{n:'Pompadour',w:'Classic height to elongate your face beautifully.',top:true},{n:'Side Part Undercut',w:'Clean lines and asymmetry slim roundness.',top:false}],women:[{n:'Long Layers Past Shoulder',w:'Extra length below the chin creates elongating effect.',top:true},{n:'Deep Side Part',w:'Asymmetry breaks the circular symmetry effectively.',top:true},{n:'Low Bun with Tendrils',w:'Vertical height with soft face-framing pieces.',top:false}]},avoid:['Blunt bobs at chin level','Center parts with full bangs','Short curly styles adding width'],tips:[{b:'Go long',t:' — any cut extending past the chin works in your favor.'},{b:'Height over width',t:' — volume on top, close on sides creates the length you need.'},{b:'Avoid chin-level volume',t:' — it emphasizes the widest part of your face.'}]},
+  square:{name:'Square',sub:'Strong jaw, angular structure',desc:'A strong angular jawline nearly as wide as the forehead. Soften the angles with texture and add vertical length.',svg:`<rect x="7" y="6" width="24" height="28" rx="3" fill="none" stroke="#C9A84C" stroke-width="1.8"/>`,m:{Forehead:'1.00×',Cheeks:'1.00×',Jaw:'0.95×',Length:'1.15×'},celebs:['Angelina Jolie','Brad Pitt','Olivia Wilde','Arnold Schwarzenegger'],colors:['warm highlights','copper tones','soft balayage','honey tones'],recs:{all:[{n:'Soft Curls or Waves',w:'Rounded shapes beautifully contrast your angular jaw.',top:true},{n:'Layered Cut + Side Part',w:'Layers soften and add movement away from the face line.',top:true},{n:'Textured Quiff',w:'Adds height and movement without emphasizing jaw width.',top:false}],men:[{n:'Textured Quiff',w:'Soft texture elegantly contrasts your sharp jawline.',top:true},{n:'Slicked Back Undercut',w:'Draws attention upward and away from the strong jaw.',top:true},{n:'Medium Tousled Cut',w:'Natural wave and movement softens the square jaw.',top:false}],women:[{n:'Soft Waves Below Chin',w:'Curvy ends beautifully offset your angular bone structure.',top:true},{n:'Side-Swept Bangs',w:'Diagonal softness breaks strong horizontal lines.',top:true},{n:'Long Layered Cut',w:'Vertical length with soft layers minimizes jaw perception.',top:false}]},avoid:['Straight blunt bobs','Very close cuts with no top volume','Sleek center parts'],tips:[{b:'Embrace texture',t:' — wavy, tousled styles soften your angles most.'},{b:'Use side parts always',t:' — they break up the strong horizontal forehead and jaw.'},{b:'Avoid blunt horizontal lines',t:' — they emphasize your already-angular structure.'}]},
+  heart:{name:'Heart',sub:'Wide forehead, narrow chin',desc:'Wider at the forehead, tapering to a narrow pointed chin. Add visual weight at the jaw and frame the forehead.',svg:`<path d="M19 10 C19 10 10 6 10 14 C10 20 17 26 19 30 C21 26 28 20 28 14 C28 6 19 10 19 10Z" fill="none" stroke="#C9A84C" stroke-width="1.8"/>`,m:{Forehead:'1.15×',Cheeks:'1.00×',Jaw:'0.75×',Length:'1.25×'},celebs:['Reese Witherspoon','Ryan Gosling','Scarlett Johansson','Justin Timberlake'],colors:['balayage','dimensional brunette','warm ombre','soft highlights'],recs:{all:[{n:'Chin-Length Bob',w:"Volume at the jawline perfectly balances a wider forehead.",top:true},{n:'Side-Swept Fringe',w:'Minimizes the wide forehead by drawing the eye diagonally.',top:true},{n:'Wavy Lob',w:"Adds width below the chin exactly where it's needed.",top:false},{n:'Curtain Bangs',w:'Frames the forehead while keeping proportions balanced.',top:false}],men:[{n:'Textured Side Part',w:'Asymmetric parting reduces forehead width emphasis.',top:true},{n:'Medium Wavy Crop',w:'Natural texture softens the pointed chin.',top:true}],women:[{n:'Chin-Length Bob',w:'The single best cut for heart shapes — volume at the jaw.',top:true},{n:'Side-Swept Bangs',w:'Divides forehead diagonally to reduce width perception.',top:true},{n:'Wavy Lob',w:'Adds width at shoulders while minimizing the upper face.',top:false}]},avoid:['Short tapered cuts','Sleek center parts with no volume','Slicked-back updos exposing forehead'],tips:[{b:'Volume at the jaw is everything',t:' — any style flaring below the cheekbones works.'},{b:'Side-swept bangs are your secret weapon',t:' — they rebalance the forehead immediately.'},{b:'Avoid top-heavy styles',t:' — high updos expose and emphasize a wide forehead.'}]},
+  oblong:{name:'Oblong',sub:'Long, narrow, elegant',desc:'Notably longer than wide with a straight cheek line. Add width and reduce the appearance of length.',svg:`<ellipse cx="19" cy="20" rx="9" ry="16" fill="none" stroke="#C9A84C" stroke-width="1.8"/>`,m:{Forehead:'1.00×',Cheeks:'0.95×',Jaw:'0.90×',Length:'1.55×'},celebs:['Sarah Jessica Parker','Ben Stiller','Liv Tyler','Adam Driver'],colors:['rich brunette','deep auburn','warm black','chocolate brown'],recs:{all:[{n:'Blunt Bangs',w:'Breaks the forehead line and visually shortens the face.',top:true},{n:'Voluminous Curls',w:'Side volume adds width and reduces perceived length.',top:true},{n:'Medium Bob at Jaw',w:'Horizontal line at jaw creates width and shortens perception.',top:false},{n:'Butterfly Cut',w:'Wide layers through the mid-section add flattering width.',top:false}],men:[{n:'Short Back + Sides with Volume',w:'Side volume is key — adds width without top length.',top:true},{n:'Messy Textured Top',w:'Horizontal texture reduces perceived face length.',top:true},{n:'Side Swept with Fringe',w:'Covers the forehead and redirects attention horizontally.',top:false}],women:[{n:'Blunt Bangs',w:'Most effective cut for visually shortening a long face.',top:true},{n:'Curly or Wavy Bob',w:'Maximum width at cheeks — exactly what oblong needs.',top:true},{n:'Butterfly Cut',w:'Wide layers are extremely trendy and incredibly flattering.',top:false}]},avoid:['Long straight hair + center part','Tall updos adding height','Sleek styles without side volume'],tips:[{b:'Bangs are transformative',t:' — blunt or wispy, they visually shorten your face.'},{b:'Go wide, not tall',t:' — side volume is your priority; avoid height on top.'},{b:'Embrace curls and waves',t:' — any natural volume at the sides works beautifully.'}]},
+  diamond:{name:'Diamond',sub:'High cheekbones, narrow forehead',desc:'Widest at the cheekbones with narrow forehead and chin. Add width at the forehead and balance the narrow chin.',svg:`<polygon points="19,5 30,20 19,35 8,20" fill="none" stroke="#C9A84C" stroke-width="1.8"/>`,m:{Forehead:'0.85×',Cheeks:'1.15×',Jaw:'0.80×',Length:'1.30×'},celebs:['Halle Berry','Johnny Depp','Rihanna','Robert Pattinson'],colors:['platinum blonde','silver','icy highlights','face-framing color'],recs:{all:[{n:'Side-Swept Bangs',w:'Adds width to the narrow forehead and draws the eye across.',top:true},{n:'Full Fringe',w:'Widens the forehead to balance your prominent cheekbones.',top:true},{n:'Layered Mid-Length Cut',w:'Soft layers keep attention on your beautiful cheekbones.',top:false}],men:[{n:'Quiff + Textured Top',w:'Volume on top widens the forehead to balance cheekbones.',top:true},{n:'Crew Cut + Top Volume',w:'Short sides minimize cheekbones; top adds the balance.',top:true}],women:[{n:'Side-Swept Bangs',w:'Most effective way to balance a narrow forehead.',top:true},{n:'Layered Bob + Fringe',w:'Frames and balances both narrow forehead and chin.',top:true},{n:'Curtain Bangs',w:'Gentle framing that adds just the right forehead width.',top:false}]},avoid:['Center parts with no bangs','Very narrow close-cropped styles','Styles emphasizing cheekbones'],tips:[{b:'Bangs are essential',t:' — any fringe adds the forehead width you need.'},{b:'Your cheekbones are an asset',t:" — you're not hiding them, just balancing everything around them."},{b:'Chin-length volume',t:' — add width at the chin to complement your narrow jaw.'}]},
+};
+
+const CATALOG = [
+  {id:'tc',name:'Textured Crop',desc:'Short with intentional texture on top, clean on the sides.',shapes:['oval','square','oblong'],modes:['men','all'],tags:['short','modern','textured'],top:true,query:'textured crop haircut men'},
+  {id:'cb',name:'Curtain Bangs',desc:'Soft face-framing bangs parted in the middle that sweep to either side.',shapes:['oval','heart','diamond'],modes:['women','all'],tags:['bangs','romantic','soft'],top:true,query:'curtain bangs hairstyle woman'},
+  {id:'ll',name:'Long Layers',desc:'Length maintained while adding movement through graduated layers.',shapes:['oval','oblong','square'],modes:['women','all'],tags:['long','layers','versatile'],top:true,query:'long layered haircut woman'},
+  {id:'up',name:'Undercut Pompadour',desc:'Short sides with a voluminous swept-back top.',shapes:['oval','square','round'],modes:['men','all'],tags:['volume','classic','undercut'],top:false,query:'undercut pompadour men haircut'},
+  {id:'bw',name:'Beach Waves',desc:'Effortlessly tousled waves with natural texture and movement.',shapes:['oval','square'],modes:['women','all'],tags:['waves','casual','beachy'],top:false,query:'beach waves hairstyle woman'},
+  {id:'lob',name:'Lob (Long Bob)',desc:'A versatile long bob hitting just above or below the collarbone.',shapes:['oval','square','diamond'],modes:['women','all'],tags:['bob','medium','versatile'],top:false,query:'lob long bob haircut woman'},
+  {id:'hvq',name:'High Volume Quiff',desc:'Hair swept upward and forward into a voluminous quiff.',shapes:['round','square'],modes:['men','all'],tags:['volume','quiff','height'],top:true,query:'quiff high volume men hair'},
+  {id:'pom',name:'Pompadour',desc:'Hair swept back from the forehead with height and volume.',shapes:['round','oblong'],modes:['men','all'],tags:['volume','retro','height'],top:true,query:'pompadour haircut men style'},
+  {id:'hf',name:'High Fade + Textured Top',desc:'Skin or high taper fade with natural texture on top.',shapes:['round'],modes:['men'],tags:['fade','short','modern'],top:true,query:'high fade textured top men'},
+  {id:'dsp',name:'Deep Side Part',desc:'A dramatically off-center part creating diagonal asymmetry.',shapes:['round','heart'],modes:['women','all'],tags:['asymmetric','sleek','elegant'],top:true,query:'deep side part hairstyle woman'},
+  {id:'scw',name:'Soft Curls or Waves',desc:'Natural or styled curls adding softness and rounded movement.',shapes:['square','oblong'],modes:['women','all'],tags:['curly','soft','feminine'],top:true,query:'soft curls waves woman haircut'},
+  {id:'lsp',name:'Layered Cut + Side Part',desc:'Layers adding volume and movement with an asymmetric part.',shapes:['square','round','diamond'],modes:['women','all'],tags:['layers','medium','movement'],top:true,query:'layered haircut side part woman'},
+  {id:'sbu',name:'Slicked Back Undercut',desc:'A dramatic undercut with hair slicked backward from the forehead.',shapes:['square','oval'],modes:['men'],tags:['undercut','sleek','edgy'],top:true,query:'slicked back undercut men'},
+  {id:'clb',name:'Chin-Length Bob',desc:'A classic bob cut that hits precisely at the jawline.',shapes:['heart','diamond'],modes:['women','all'],tags:['bob','short','classic'],top:true,query:'chin length bob haircut woman'},
+  {id:'ssf',name:'Side-Swept Fringe',desc:'Bangs swept diagonally across the forehead to one side.',shapes:['heart','oblong','diamond'],modes:['women','all'],tags:['bangs','swept','feminine'],top:true,query:'side swept fringe bangs woman'},
+  {id:'wlb',name:'Wavy Lob',desc:'A long bob with natural waves for added movement.',shapes:['heart','square'],modes:['women','all'],tags:['waves','bob','medium'],top:false,query:'wavy lob haircut woman style'},
+  {id:'bb',name:'Blunt Bangs',desc:'Thick straight-across bangs with a clean blunt edge.',shapes:['oblong'],modes:['women','all'],tags:['bangs','blunt','bold'],top:true,query:'blunt bangs haircut woman'},
+  {id:'vc',name:'Voluminous Curls',desc:'Full bouncy curls with maximum volume at the sides.',shapes:['oblong','round'],modes:['women','all'],tags:['curly','voluminous','natural'],top:true,query:'voluminous curls woman hairstyle'},
+  {id:'bt',name:'Butterfly Cut',desc:'A modern shag-inspired cut with short crown layers and long lengths.',shapes:['oblong'],modes:['women','all'],tags:['shag','layers','trendy'],top:false,query:'butterfly cut shag haircut woman'},
+  {id:'ssb',name:'Side-Swept Bangs',desc:'Longer bangs swept to one side creating diagonal framing.',shapes:['diamond','heart','oblong'],modes:['women','all'],tags:['bangs','swept','face-framing'],top:true,query:'side swept bangs woman hairstyle'},
+  {id:'ccu',name:'Crew Cut + Volume',desc:'A classic crew cut with slightly more volume left on top.',shapes:['diamond','square'],modes:['men'],tags:['crew','short','clean'],top:true,query:'crew cut men haircut style'},
+  {id:'bzz',name:'Buzz Cut',desc:'Uniformly short all around. Bold, clean, confident.',shapes:['oval','diamond'],modes:['men','all'],tags:['buzz','short','minimal'],top:false,query:'buzz cut men style'},
+  {id:'lbf',name:'Layered Bob + Fringe',desc:'A bob with internal layers and bangs for added dimension.',shapes:['diamond','round'],modes:['women','all'],tags:['bob','layers','fringe'],top:true,query:'layered bob fringe haircut woman'},
+  {id:'mtx',name:'Messy Textured Top',desc:'Intentionally disheveled texture on top with shorter sides.',shapes:['oblong','square'],modes:['men'],tags:['textured','casual','modern'],top:true,query:'messy textured hair men style'},
+  {id:'qft',name:'Quiff + Textured Top',desc:'Volume swept forward and upward with natural texture.',shapes:['diamond','round'],modes:['men','all'],tags:['quiff','textured','volume'],top:true,query:'quiff textured top men hair'},
+  {id:'pxs',name:'Pixie Cut',desc:'A short bold pixie with extra volume at the temples.',shapes:['diamond','oval'],modes:['women','all'],tags:['pixie','short','bold'],top:false,query:'pixie cut woman short hair'},
+  {id:'shg',name:'Shaggy Mid-Length',desc:'A deliberately tousled medium-length cut with lots of texture.',shapes:['square','oblong'],modes:['all'],tags:['shaggy','medium','relaxed'],top:false,query:'shaggy mid length hair style'},
+  {id:'fbf',name:'Full Fringe',desc:'Straight-across fringe that fully covers the forehead.',shapes:['oblong','diamond'],modes:['women','all'],tags:['bangs','blunt','bold'],top:true,query:'full fringe haircut woman blunt'},
+];
+
+const photoCache = { ...BAKED_PHOTOS, ...JSON.parse(localStorage.getItem('hs_photo_cache') || '{}') };
+const fetchingInProgress = new Set();
+
+async function fetchPhoto(style) {
+  if (photoCache[style.id]) return photoCache[style.id];
+  if (fetchingInProgress.has(style.id)) return null;
+  fetchingInProgress.add(style.id);
+  try {
+    const prompt = `Find one real photo URL showing a "${style.name}" hairstyle (${style.desc}). Search for: "${style.query}". Return ONLY a single direct image URL (jpg or jpeg) from pexels.com that accurately shows this specific hairstyle. The image must show the actual hairstyle clearly. Return just the URL, nothing else.`;
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 200,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!response.ok) throw new Error('API error');
+    const data = await response.json();
+    const text = data.content.filter(b => b.type === 'text').map(b => b.text).join(' ');
+    const urlMatch = text.match(/https:\/\/images\.pexels\.com\/photos\/[\d]+\/[^\s"'<>]+\.jpeg[^\s"'<>]*/i)
+                  || text.match(/https:\/\/images\.pexels\.com\/photos\/[\d]+\/[^\s"'<>]+/i);
+    if (urlMatch) {
+      let url = urlMatch[0].split(/['"\s<>]/)[0];
+      if (!url.includes('?')) url += '?auto=compress&cs=tinysrgb&w=600';
+      else if (!url.includes('w=')) url += '&w=600';
+      photoCache[style.id] = url;
+      localStorage.setItem('hs_photo_cache', JSON.stringify(photoCache));
+      return url;
+    }
+  } catch (e) { console.warn('Photo fetch failed for', style.name, e.message); }
+  finally { fetchingInProgress.delete(style.id); }
+  return null;
+}
+
+async function fetchPhotosForShapes(shape, onPhotoLoaded) {
+  const relevant = CATALOG.filter(s => s.shapes.includes(shape) && s.modes.some(m => m === styleMode || m === 'all'));
+  await Promise.all(relevant.map(async s => {
+    const url = await fetchPhoto(s);
+    if (url && onPhotoLoaded) onPhotoLoaded(s.id, url);
+  }));
+}
+
+function injectPhoto(styleId, url) {
+  document.querySelectorAll('.rec-thumb-ph').forEach(el => {
+    if (el.closest('[data-style-id="' + styleId + '"]')) {
+      const img = document.createElement('img');
+      img.className = 'rec-thumb'; img.src = url; img.alt = styleId; img.loading = 'lazy';
+      el.replaceWith(img);
+    }
+  });
+  const gph = document.getElementById('gph-' + styleId);
+  if (gph) {
+    const img = document.createElement('img');
+    img.src = url; img.alt = styleId; img.loading = 'lazy';
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;transition:transform 0.4s';
+    gph.replaceWith(img);
+  }
+  const gcImg = document.querySelector('#gc-' + styleId + ' .gcard-img img[src=""]');
+  if (gcImg) gcImg.src = url;
+}
+
+function saveAuth(user, at, rt) {
+  auth = { user, token: at, refresh: rt };
+  localStorage.setItem('hs_at', at); localStorage.setItem('hs_rt', rt);
+  localStorage.setItem('hs_user', JSON.stringify(user)); renderAuthHeader();
+}
+function clearAuth() {
+  auth = { user: null, token: null, refresh: null };
+  ['hs_at','hs_rt','hs_user'].forEach(k => localStorage.removeItem(k)); renderAuthHeader();
+}
+function renderAuthHeader() {
+  const area = document.getElementById('authArea');
+  if (auth.user) {
+    const ini = auth.user.name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    area.innerHTML = `<div class="user-chip" onclick="doLogout()" title="Sign out"><div class="avatar">${ini}</div><span>${auth.user.name}</span></div>`;
+  } else {
+    area.innerHTML = `<button class="btn-xs btn-xs-ghost" onclick="openModal('login')">Sign In</button><button class="btn-xs btn-xs-gold" onclick="openModal('register')">Create Account</button>`;
+  }
+}
+
+async function apiFetch(path, opts = {}) {
+  const h = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  if (auth.token) h.Authorization = `Bearer ${auth.token}`;
+  const r = await fetch(`${API}${path}`, { ...opts, headers: h });
+  if (r.status === 401 && auth.refresh) {
+    const rr = await fetch(`${API}/auth/refresh`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken: auth.refresh }) });
+    if (rr.ok) { const d = await rr.json(); auth.token = d.accessToken; auth.refresh = d.refreshToken; localStorage.setItem('hs_at', d.accessToken); localStorage.setItem('hs_rt', d.refreshToken); h.Authorization = `Bearer ${d.accessToken}`; return fetch(`${API}${path}`, { ...opts, headers: h }); }
+    else { clearAuth(); throw new Error('Session expired'); }
+  }
+  return r;
+}
+
+function openModal(tab) { document.getElementById('authModal').classList.add('open'); swMTab(tab); }
+function closeModal() { document.getElementById('authModal').classList.remove('open'); }
+function swMTab(t) {
+  document.getElementById('mLoginForm').style.display = t === 'login' ? 'block' : 'none';
+  document.getElementById('mRegForm').style.display = t === 'register' ? 'block' : 'none';
+  document.getElementById('mt-login').classList.toggle('active', t === 'login');
+  document.getElementById('mt-reg').classList.toggle('active', t === 'register');
+}
+document.getElementById('authModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+async function doLogin() {
+  const e = document.getElementById('lEmail').value.trim(), p = document.getElementById('lPwd').value;
+  const err = document.getElementById('lErr'), btn = document.getElementById('lBtn');
+  err.textContent = ''; if (!e || !p) { err.textContent = 'Fill in all fields.'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  try {
+    const r = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: e, password: p }) });
+    const d = await r.json();
+    if (!r.ok) { err.textContent = d.error || 'Login failed'; return; }
+    saveAuth(d.user, d.accessToken, d.refreshToken); closeModal(); toast('Welcome back, ' + d.user.name + '!');
+  } catch { err.textContent = 'Server unreachable.'; }
+  finally { btn.disabled = false; btn.textContent = 'Sign In'; }
+}
+
+async function doRegister() {
+  const n = document.getElementById('rName').value.trim(), e = document.getElementById('rEmail').value.trim(), p = document.getElementById('rPwd').value;
+  const err = document.getElementById('rErr'), btn = document.getElementById('rBtn');
+  err.textContent = ''; if (!n || !e || !p) { err.textContent = 'Fill in all fields.'; return; }
+  if (p.length < 8) { err.textContent = 'Password must be 8+ characters.'; return; }
+  btn.disabled = true; btn.textContent = 'Creating account...';
+  try {
+    const r = await fetch(`${API}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: n, email: e, password: p }) });
+    const d = await r.json();
+    if (!r.ok) { err.textContent = d.error || 'Registration failed'; return; }
+    saveAuth(d.user, d.accessToken, d.refreshToken); closeModal(); toast('Account created! Welcome, ' + d.user.name + '.');
+  } catch { err.textContent = 'Server unreachable.'; }
+  finally { btn.disabled = false; btn.textContent = 'Create Account'; }
+}
+
+async function doLogout() {
+  try { await apiFetch('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken: auth.refresh }) }); } catch {}
+  clearAuth(); toast('Signed out successfully.');
+}
+
+function switchPage(p) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab,.nav-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + p).classList.add('active');
+  document.getElementById('tab-' + p)?.classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => { if (b.getAttribute('onclick')?.includes(`'${p}'`)) b.classList.add('active'); });
+  if (p === 'gallery') renderGallery();
+  if (p === 'history') renderHistory();
+  if (p === 'quiz') startQuiz();
+}
+
+function setStatus(type, txt) {
+  const d = document.getElementById('dot'); d.className = 'dot' + (type ? ' ' + type : '');
+  document.getElementById('stTxt').textContent = txt;
+}
+function setSM(m, btn) {
+  styleMode = m;
+  document.querySelectorAll('.stgl button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (currentResult) renderResults(currentResult.shape, currentResult.confidence, currentResult.ratios);
+}
+function setARMode(mode, btn) {
+  arMode = mode;
+  document.querySelectorAll('.ar-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function startCamera() {
+  document.getElementById('startBtn').disabled = true;
+  setStatus('busy', 'Requesting camera...');
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' } });
+    const v = document.getElementById('videoEl'); v.srcObject = stream; v.style.display = 'block';
+    document.getElementById('vPh').style.display = 'none'; cameraLive = true;
+    document.getElementById('arControls').classList.add('on');
+    await initMP(v);
+    document.getElementById('startBtn').textContent = 'Camera On';
+    document.getElementById('analyzeBtn').disabled = false;
+    setStatus('live', 'Live — center face in oval');
+  } catch {
+    setStatus('', 'Demo mode (camera denied)');
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('startBtn').textContent = 'Retry Camera';
+    document.getElementById('analyzeBtn').disabled = false;
+    drawGuide(false);
+    toast('Camera access denied — running in demo mode');
+  }
+}
+
+async function initMP(v) {
+  if (typeof FaceMesh === 'undefined') { drawGuide(false); return; }
+  faceMesh = new FaceMesh({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}` });
+  faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+  faceMesh.onResults(onFace);
+  if (typeof Camera !== 'undefined') {
+    mpCam = new Camera(v, { onFrame: async () => { if (faceMesh) await faceMesh.send({ image: v }); }, width: 640, height: 480 });
+    mpCam.start();
+  } else {
+    const loop = async () => { if (cameraLive && faceMesh) await faceMesh.send({ image: v }); if (cameraLive) requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+  }
+}
+
+function onFace(results) {
+  const wrap = document.getElementById('vWrap');
+  const oc = document.getElementById('overlayCanvas');
+  oc.width = wrap.offsetWidth; oc.height = wrap.offsetHeight;
+  const ctx = oc.getContext('2d'); ctx.clearRect(0, 0, oc.width, oc.height);
+  if (!results.multiFaceLandmarks?.[0]) { drawGuide(false); document.getElementById('liveTag').classList.remove('on'); return; }
+  const lm = results.multiFaceLandmarks[0];
+  lastLandmarks = lm;
+  if (arMode !== 'clean') drawFaceMesh(ctx, lm, oc.width, oc.height);
+  drawGuide(true);
+  const { shape, confidence } = classify(lm);
+  currentResult = { shape, confidence };
+  const tag = document.getElementById('liveTag');
+  tag.textContent = `${S[shape].name} · ${confidence}%`;
+  tag.classList.add('on');
+}
+
+function drawFaceMesh(ctx, lm, w, h) {
+  const pts = arMode === 'points';
+  const jaw = [10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109,10];
+  ctx.strokeStyle = 'rgba(201,168,76,0.28)'; ctx.lineWidth = pts ? 0 : 0.9;
+  if (!pts) { ctx.beginPath(); jaw.forEach((i, n) => { const p = lm[i]; n === 0 ? ctx.moveTo(p.x*w, p.y*h) : ctx.lineTo(p.x*w, p.y*h); }); ctx.stroke(); }
+  [[10,'top'],[152,'chin'],[234,'L'],[454,'R'],[172,'jL'],[397,'jR'],[109,'tL'],[338,'tR']].forEach(([i]) => {
+    ctx.fillStyle = `rgba(201,168,76,${pts ? 0.9 : 0.85})`; ctx.beginPath(); ctx.arc(lm[i].x*w, lm[i].y*h, pts ? 3 : 2.5, 0, Math.PI*2); ctx.fill();
+  });
+  if (arMode === 'mesh') {
+    [[33,133],[362,263],[61,291],[0,17]].forEach(([a,b]) => { ctx.beginPath(); ctx.moveTo(lm[a].x*w, lm[a].y*h); ctx.lineTo(lm[b].x*w, lm[b].y*h); ctx.stroke(); });
+    ctx.strokeStyle = 'rgba(77,184,168,0.4)'; ctx.lineWidth = 0.7; ctx.setLineDash([3,4]);
+    ctx.beginPath(); ctx.moveTo(lm[234].x*w, lm[234].y*h); ctx.lineTo(lm[454].x*w, lm[454].y*h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(lm[10].x*w, lm[10].y*h); ctx.lineTo(lm[152].x*w, lm[152].y*h); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function drawGuide(detected) {
+  const oc = document.getElementById('overlayCanvas');
+  const w = oc.width, h = oc.height;
+  if (!w || !h) return;
+  const ctx = oc.getContext('2d');
+  ctx.strokeStyle = detected ? 'rgba(77,184,168,0.5)' : 'rgba(201,168,76,0.22)';
+  ctx.lineWidth = detected ? 1.5 : 1; ctx.setLineDash([5, 5]);
+  ctx.beginPath(); ctx.ellipse(w/2, h*0.5, w*0.22, h*0.38, 0, 0, Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  if (!detected) {
+    ctx.fillStyle = 'rgba(201,168,76,0.06)'; ctx.beginPath();
+    ctx.ellipse(w/2, h*0.5, w*0.22, h*0.38, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(201,168,76,0.5)'; ctx.font = '11px Sora,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Position your face here', w/2, h*0.5 + h*0.38 + 20);
+  }
+}
+
+function dist(a, b) { return Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2); }
+function sr(v,mn,mx,w) { if(v>=mn&&v<=mx){const m=(mn+mx)/2,s=(mx-mn)/2;return(1-Math.abs(v-m)/s)*w;} return Math.max(0,1-(v<mn?mn-v:v-mx)/0.15)*w*0.3; }
+function classify(lm) {
+  const fw=dist(lm[109],lm[338]),cw=dist(lm[234],lm[454]),jw=dist(lm[172],lm[397]),fl=dist(lm[10],lm[152]);
+  const f=fw/cw,j=jw/cw,l=fl/cw;
+  const sc={oval:sr(f,0.95,1.05,20)+sr(j,0.85,0.95,20)+sr(l,1.20,1.45,25),round:sr(f,0.90,1.05,20)+sr(j,0.90,1.00,15)+sr(l,0.95,1.20,30),square:sr(f,0.92,1.05,20)+sr(j,0.90,1.02,25)+sr(l,1.05,1.25,20),heart:sr(f,1.05,1.25,35)+sr(j,0.65,0.85,30)+sr(l,1.10,1.40,10),oblong:sr(f,0.90,1.05,15)+sr(j,0.85,1.00,15)+sr(l,1.40,1.80,40),diamond:sr(f,0.70,0.90,30)+sr(j,0.65,0.85,25)+sr(l,1.10,1.40,10)};
+  let shape='oval',best=0;
+  Object.entries(sc).forEach(([s,v]) => { if(v>best){best=v;shape=s;} });
+  const confidence=Math.min(94,Math.max(65,Math.round(60+best*0.4)));
+  const ratios={forehead:(f).toFixed(2),cheeks:'1.00',jaw:(j).toFixed(2),length:(l).toFixed(2)};
+  return {shape,confidence,ratios};
+}
+
+async function doAnalyze() {
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('cover').classList.add('on');
+  document.getElementById('scanline').classList.add('on');
+  let shape, confidence, ratios, photo64 = null;
+  const steps = ['Mapping 468 face landmarks...','Calculating facial ratios...','Scoring 6 shape profiles...','Fetching personalized styles...','Building your recommendations...'];
+  for (const s of steps) { document.getElementById('cstep').textContent = s; await sleep(520); }
+  if (lastLandmarks) {
+    const r = classify(lastLandmarks); shape = r.shape; confidence = r.confidence; ratios = r.ratios;
+    const v = document.getElementById('videoEl'), hc = document.getElementById('hidCanvas');
+    hc.width = v.videoWidth||640; hc.height = v.videoHeight||480; hc.getContext('2d').drawImage(v, 0, 0);
+    photo64 = hc.toDataURL('image/jpeg', 0.82);
+    const ci = document.getElementById('capturedImg'); ci.src = photo64; ci.style.display = 'block';
+    v.style.display = 'none'; document.getElementById('overlayCanvas').style.display = 'none';
+    document.getElementById('arControls').classList.remove('on');
+  } else {
+    const shapes = Object.keys(S); shape = shapes[Math.floor(Math.random()*shapes.length)];
+    confidence = 71 + Math.floor(Math.random()*22); ratios = null;
+  }
+  document.getElementById('cover').classList.remove('on');
+  document.getElementById('scanline').classList.remove('on');
+  document.getElementById('analyzeBtn').disabled = false;
+  document.getElementById('analyzeBtn').textContent = 'Re-analyze';
+  setStatus('done', 'Analysis complete');
+  currentResult = { shape, confidence, ratios, photo: photo64 };
+  renderResults(shape, confidence, ratios);
+  saveLocalResult(shape, confidence, styleMode, photo64);
+  fetchPhotosForShapes(shape, (id, url) => {
+    injectPhoto(id, url);
+    const thumbPh = document.querySelector('.rec-thumb-ph');
+    if (thumbPh) renderResults(shape, confidence, ratios);
+  });
+  if (auth.token) {
+    try { await apiFetch('/analysis', { method: 'POST', body: JSON.stringify({ faceShape: shape, confidence, styleMode, ratios, photo: photo64 }) }); toast('Analysis saved to your account ✓'); }
+    catch {}
+  }
+}
+
+function renderResults(shape, confidence, ratios) {
+  const data = S[shape];
+  const recs = (data.recs[styleMode] || data.recs.all);
+  const meas = ratios ? {Forehead:`${ratios.forehead}×`,Cheeks:`${ratios.cheeks}×`,Jaw:`${ratios.jaw}×`,Length:`${ratios.length}×`} : data.m;
+  const measH = Object.entries(meas).map(([k,v]) => `<div class="mcell"><div class="mval">${v}</div><div class="mlbl">${k}</div></div>`).join('');
+  const recsH = recs.map((r,i) => {
+    const style = CATALOG.find(c => c.name === r.n);
+    const img = style && photoCache[style.id];
+    const imgEl = img ? `<img class="rec-thumb" src="${img}" alt="${r.n}" loading="lazy" onerror="this.style.display='none'">` : `<div class="rec-thumb-ph"></div>`;
+    return `<div class="rec-item" data-style-id="${style?.id||''}" onclick="openStyleLightbox('${style?.id||''}')">
+      <div class="rec-rank">0${i+1}</div>
+      <div class="rec-body"><div class="rec-name">${r.n}</div><div class="rec-why">${r.w}</div></div>
+      ${imgEl}
+      <div class="badge ${r.top?'badge-best':'badge-good'}">${r.top?'Best pick':'Good fit'}</div>
+    </div>`;
+  }).join('');
+  const avoidH = data.avoid.map(a => `<span class="avoid-chip">${a}</span>`).join('');
+  const tipsH = data.tips.map(t => `<div class="tip-item"><div class="tdot"></div><div class="ttxt"><strong>${t.b}</strong>${t.t}</div></div>`).join('');
+  const colorH = buildColorSection(shape);
+  const celebH = buildCelebSection(shape, data.celebs);
+  const col = document.getElementById('resCol');
+  col.innerHTML = `
+    <div class="rcard" id="rc1">
+      <div class="rcard-hd">Your Face Shape</div>
+      <div class="shape-row">
+        <div class="shape-ico"><svg viewBox="0 0 38 40" xmlns="http://www.w3.org/2000/svg">${data.svg}</svg></div>
+        <div><div class="shape-name">${data.name}</div><div class="shape-sub">${data.sub}</div></div>
+      </div>
+      <div class="shape-desc">${data.desc}</div>
+      <div class="mrow">${measH}</div>
+      <div class="conf-row"><span class="conf-lbl">Detection confidence</span><div class="btrack"><div class="bfill" id="bfill"></div></div><span class="cpct">${confidence}%</span></div>
+    </div>
+    <div class="rcard" id="rc2"><div class="rcard-hd">Recommended Hairstyles</div>${recsH}</div>
+    <div class="rcard" id="rc3"><div class="rcard-hd">Hair Color Recommendations</div><div class="color-grid">${colorH}</div></div>
+    <div class="rcard" id="rc4"><div class="rcard-hd">Celebrities with Your Face Shape</div><div class="celeb-grid">${celebH}</div></div>
+    <div class="rcard" id="rc5"><div class="rcard-hd">Styling Tips for ${data.name} Faces</div>${tipsH}</div>
+    <div class="rcard" id="rc6"><div class="rcard-hd">Styles to Avoid</div><div class="avoid-wrap"><div class="avoid-lbl">These work against your face shape</div><div class="avoid-chips">${avoidH}</div></div></div>
+    <div style="display:flex;gap:0.75rem">
+      <button class="btn-gold" style="flex:1;justify-content:center" onclick="${auth.user ? "toast('Already saved ✓')" : "openModal('login')"}">
+        ${auth.user ? 'Saved to Account ✓' : 'Save This Look'}
+      </button>
+      <button class="btn-outline" style="flex:1;justify-content:center" onclick="shareResult('${shape}',${confidence})">Share</button>
+    </div>`;
+  [1,2,3,4,5,6].forEach((n,i) => setTimeout(() => document.getElementById('rc'+n)?.classList.add('in'), i*130+50));
+  setTimeout(() => { const b = document.getElementById('bfill'); if (b) b.style.width = confidence + '%'; }, 700);
+}
+
+const COLOR_RECS = {
+  oval:[{name:'Honey Blonde',hex:'#D4A843',type:'Warm'},{name:'Caramel',hex:'#A0522D',type:'Balayage'},{name:'Warm Brown',hex:'#6B3A2A',type:'Natural'},{name:'Ash Blonde',hex:'#B8A99A',type:'Cool'},{name:'Auburn',hex:'#8B3A1C',type:'Rich'}],
+  round:[{name:'Cool Brunette',hex:'#4A3728',type:'Dimensional'},{name:'Ombre Dark',hex:'#2C1810',type:'Ombre'},{name:'Babylights',hex:'#C9A87C',type:'Face-Framing'},{name:'Espresso',hex:'#2D1B0E',type:'Deep'}],
+  square:[{name:'Copper',hex:'#8B4513',type:'Warm'},{name:'Golden Balayage',hex:'#C8A45E',type:'Balayage'},{name:'Warm Brown',hex:'#7B4F3A',type:'Natural'},{name:'Honey Tones',hex:'#BF8040',type:'Warm'}],
+  heart:[{name:'Dimensional Brunette',hex:'#4D3320',type:'Depth'},{name:'Warm Ombre',hex:'#A0522D',type:'Ombre'},{name:'Soft Highlights',hex:'#C4A882',type:'Subtle'},{name:'Sandy Blonde',hex:'#C8A96E',type:'Natural'}],
+  oblong:[{name:'Rich Brunette',hex:'#3D2314',type:'Full'},{name:'Deep Auburn',hex:'#6B2D1A',type:'Warm'},{name:'Chocolate Brown',hex:'#5C3317',type:'Classic'},{name:'Warm Black',hex:'#1A0F0A',type:'Deep'}],
+  diamond:[{name:'Platinum',hex:'#E8E0D5',type:'Bold'},{name:'Silver',hex:'#A8A8A8',type:'Trendy'},{name:'Icy Highlights',hex:'#D5D0CC',type:'Face-Framing'},{name:'Rose Gold',hex:'#C79B8A',type:'Fashion'}],
+};
+function buildColorSection(shape) {
+  return (COLOR_RECS[shape] || []).map(c => `<div class="color-swatch"><div class="swatch-color" style="background:${c.hex}"></div><div class="swatch-info"><div class="swatch-name">${c.name}</div><div class="swatch-type">${c.type}</div></div></div>`).join('');
+}
+
+const CELEB_EMOJIS = { 'Beyoncé':'👑','George Clooney':'🎬','Jessica Alba':'⭐','Brad Pitt':'🎥','Chrissy Teigen':'✨','Leonardo DiCaprio':'🌊','Selena Gomez':'🌹','Jack Black':'🎸','Angelina Jolie':'💎','Olivia Wilde':'🌿','Reese Witherspoon':'💫','Ryan Gosling':'🎭','Scarlett Johansson':'🔥','Justin Timberlake':'🎵','Sarah Jessica Parker':'👠','Ben Stiller':'😄','Liv Tyler':'🌸','Adam Driver':'🎬','Halle Berry':'💎','Johnny Depp':'🎭','Rihanna':'💄','Robert Pattinson':'🌙' };
+function buildCelebSection(shape, celebs) {
+  return celebs.map(name => `<div class="celeb-card" onclick="toast('${name} has the same ${S[shape].name} face shape as you!')"><div class="celeb-img-wrap">${CELEB_EMOJIS[name] || '⭐'}</div><div class="celeb-info"><div class="celeb-name">${name}</div><div class="celeb-shape">${S[shape].name} shape</div></div></div>`).join('');
+}
+
+async function renderGallery() {
+  const grid = document.getElementById('galleryGrid');
+  const filtered = galleryFilter === 'all' ? CATALOG : CATALOG.filter(s => s.shapes.includes(galleryFilter));
+  document.getElementById('galleryCount').textContent = `${filtered.length} hairstyles${galleryFilter !== 'all' ? ' for ' + S[galleryFilter]?.name + ' faces' : ''}`;
+  grid.innerHTML = filtered.map(s => {
+    const imgUrl = photoCache[s.id];
+    const imgEl = imgUrl
+      ? `<img src="${imgUrl}" alt="${s.name}" loading="lazy" style="width:100%;height:100%;object-fit:cover;transition:transform 0.4s">`
+      : `<div class="gcard-img-ph" id="gph-${s.id}"></div>`;
+    return `<div class="gcard" id="gc-${s.id}" onclick="openStyleLightbox('${s.id}')">
+      <div class="gcard-img">
+        ${imgEl}
+        <div class="gcard-overlay"><div class="gcard-overlay-name">View Details</div></div>
+        <button class="gsave-btn ${savedStyles.has(s.id)?'saved':''}" onclick="toggleSaveStyle(event,'${s.id}')">${savedStyles.has(s.id)?'♥':'♡'}</button>
+      </div>
+      <div class="gcard-body"><div class="gcard-name">${s.name}</div><div class="gcard-tags">${s.tags.slice(0,3).map(t=>`<span class="gtag">${t}</span>`).join('')}</div></div>
+    </div>`;
+  }).join('');
+  filtered.forEach(async (s) => {
+    if (!photoCache[s.id]) {
+      const url = await fetchPhoto(s);
+      if (url) {
+        const ph = document.getElementById('gph-' + s.id);
+        if (ph) { const img = document.createElement('img'); img.src = url; img.alt = s.name; img.loading = 'lazy'; img.style.cssText = 'width:100%;height:100%;object-fit:cover;transition:transform 0.4s'; ph.replaceWith(img); }
+      }
+    }
+  });
+}
+
+function filterGallery(filter, btn) {
+  galleryFilter = filter;
+  document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGallery();
+}
+
+function toggleSaveStyle(e, id) {
+  e.stopPropagation();
+  if (savedStyles.has(id)) { savedStyles.delete(id); toast('Removed from saved styles.'); }
+  else { savedStyles.add(id); toast('Style saved!'); }
+  localStorage.setItem('hs_saved_styles', JSON.stringify([...savedStyles]));
+  e.currentTarget.textContent = savedStyles.has(id) ? '♥' : '♡';
+  e.currentTarget.classList.toggle('saved', savedStyles.has(id));
+}
+
+function openStyleLightbox(id) {
+  if (!id) return;
+  const style = CATALOG.find(s => s.id === id);
+  if (!style) return;
+  const img = photoCache[id];
+  const shapes = style.shapes.map(sh => `<span class="lb-shape-pill">${S[sh]?.name || sh}</span>`).join('');
+  document.getElementById('lbInner').innerHTML = `
+    <div class="lb-img">${img ? `<img src="${img}" alt="${style.name}">` : `<div class="lb-img-ph">${style.name[0]}</div>`}</div>
+    <div class="lb-info">
+      <button class="lb-close" onclick="closeLightbox()">✕</button>
+      <div class="lb-name">${style.name}</div>
+      <div class="lb-sub">${style.tags.join(' · ')}</div>
+      <div class="lb-shapes">${shapes}</div>
+      <div class="lb-desc">${style.desc}</div>
+      <button class="btn-gold" style="justify-content:center" onclick="toggleSaveStyleDirect('${id}')">${savedStyles.has(id) ? 'Saved ♥' : 'Save this Style'}</button>
+      ${img ? `<div class="lb-credit">Photo via Pexels</div>` : ''}
+    </div>`;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+function toggleSaveStyleDirect(id) {
+  if (savedStyles.has(id)) { savedStyles.delete(id); } else { savedStyles.add(id); toast('Style saved!'); }
+  localStorage.setItem('hs_saved_styles', JSON.stringify([...savedStyles]));
+  openStyleLightbox(id);
+}
+
+function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
+
+const QUIZ = [
+  { q:'How would you describe your overall face length compared to its width?', opts:['About the same (roughly circular)','Slightly longer than wide','Noticeably longer — almost oval-shaped','Significantly longer — quite narrow','Very long and narrow'] },
+  { q:'Looking at your forehead, how does it compare to your jaw width?', opts:['About the same width','My forehead is slightly wider','My forehead is noticeably wider than my jaw','My forehead is much wider, jaw tapers sharply','My forehead is narrower than my cheekbones'] },
+  { q:'Describe your jawline:', opts:['Soft and rounded, gently curved','Angular and defined, close to square','Strong and prominent with sharp corners','Gradually tapers to a relatively narrow chin','Very narrow and pointed chin'] },
+  { q:'Where is your face widest?', opts:['At my cheekbones (balanced, moderate)','At my cheekbones (very prominent, high)','At my forehead','Roughly equal across forehead, cheeks, and jaw','Similar from forehead to jaw, no major standout'] },
+  { q:'What best describes your chin?', opts:['Rounded and soft','Slightly squared','Narrow and pointed','Prominent and defined','Very narrow, almost pointed'] },
+  { q:'How would a friend describe your face shape?', opts:['Balanced and versatile — every cut works','Soft and round — cute and approachable','Strong and angular — commanding and defined','Heart-shaped — widest at the top','Long and striking — very elegant'] },
+];
+let quizAnswers = [], quizQ = 0;
+
+function startQuiz() { quizAnswers = []; quizQ = 0; renderQuizQ(); }
+
+function renderQuizQ() {
+  const prog = document.getElementById('quizProgress');
+  prog.innerHTML = QUIZ.map((_, i) => `<div class="qpip ${i < quizQ ? 'done' : i === quizQ ? 'active' : ''}"></div>`).join('');
+  if (quizQ >= QUIZ.length) { showQuizResult(); return; }
+  const q = QUIZ[quizQ];
+  document.getElementById('quizContent').innerHTML = `
+    <div class="quiz-card">
+      <div class="quiz-q-num">Question ${quizQ+1} of ${QUIZ.length}</div>
+      <div class="quiz-q">${q.q}</div>
+      <div class="quiz-opts">${q.opts.map((o,i) => `<button class="qopt" onclick="quizSelect(${i})">${o}</button>`).join('')}</div>
+      <div class="quiz-nav">${quizQ > 0 ? `<button class="btn-outline" onclick="quizBack()" style="padding:0.65rem 1.5rem;font-size:0.85rem">← Back</button>` : '<div></div>'}</div>
+    </div>`;
+}
+
+function quizSelect(idx) {
+  document.querySelectorAll('.qopt').forEach((b,i) => b.classList.toggle('selected', i === idx));
+  quizAnswers[quizQ] = idx;
+  setTimeout(() => { quizQ++; renderQuizQ(); }, 380);
+}
+function quizBack() { quizQ = Math.max(0, quizQ-1); renderQuizQ(); }
+
+function showQuizResult() {
+  const weights = { oval:0, round:0, square:0, heart:0, oblong:0, diamond:0 };
+  const QW = [
+    [['round','round'],['oval','oval'],['oval','oval'],['oblong','oblong'],['oblong','oblong']],
+    [['oval','square'],['oval','oval'],['heart','heart'],['oblong','round'],['diamond','diamond']],
+    [['round','round'],['oval','oval'],['square','square'],['heart','heart'],['diamond','diamond']],
+    [['oval','round'],['diamond','diamond'],['heart','heart'],['square','oblong'],['oblong','square']],
+    [['round','oval'],['square','oblong'],['heart','heart'],['square','square'],['diamond','diamond']],
+    [['oval','oval'],['round','round'],['square','square'],['heart','heart'],['oblong','oblong']],
+  ];
+  quizAnswers.forEach((ans, qi) => { const shapes = QW[qi]?.[ans] || []; shapes.forEach(s => { if (weights[s] !== undefined) weights[s] += 1; }); });
+  let shape = 'oval', best = 0;
+  Object.entries(weights).forEach(([s,v]) => { if (v > best) { best = v; shape = s; } });
+  const confidence = Math.min(91, Math.max(68, Math.round(65 + (best / 12) * 26)));
+  document.getElementById('quizContent').innerHTML = `
+    <div class="quiz-card" style="text-align:center">
+      <div class="quiz-q-num">Your Result</div>
+      <div style="margin:1.5rem auto;width:80px;height:80px;background:var(--gdim);border:1px solid rgba(201,168,76,0.25);border-radius:1rem;display:flex;align-items:center;justify-content:center">
+        <svg viewBox="0 0 38 40" width="48" height="48">${S[shape].svg}</svg>
+      </div>
+      <div style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:700;margin-bottom:0.35rem">${S[shape].name}</div>
+      <div style="font-size:0.78rem;color:var(--mu);margin-bottom:1.25rem">${S[shape].sub} · ${confidence}% match based on your answers</div>
+      <div style="font-size:0.85rem;color:var(--mu);line-height:1.7;margin-bottom:1.75rem">${S[shape].desc}</div>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;justify-content:center">
+        <button class="btn-gold" onclick="switchPage('scan');applyQuizResult('${shape}',${confidence})" style="justify-content:center">See Full Recommendations</button>
+        <button class="btn-outline" onclick="startQuiz()" style="justify-content:center">Retake Quiz</button>
+      </div>
+    </div>`;
+  document.getElementById('quizProgress').innerHTML = QUIZ.map(() => `<div class="qpip done"></div>`).join('');
+  saveLocalResult(shape, confidence, styleMode, null);
+}
+
+function applyQuizResult(shape, confidence) { currentResult = { shape, confidence, ratios: null }; renderResults(shape, confidence, null); }
+
+function saveLocalResult(shape, confidence, sm, photo) {
+  const hist = JSON.parse(localStorage.getItem('hs_hist') || '[]');
+  hist.unshift({ id: Date.now(), shape, confidence, styleMode: sm, photo, date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) });
+  localStorage.setItem('hs_hist', JSON.stringify(hist.slice(0, 30)));
+}
+
+async function renderHistory() {
+  const grid = document.getElementById('histGrid');
+  const prompt = document.getElementById('loginPrompt');
+  let analyses = [];
+  if (auth.token) {
+    prompt.style.display = 'none';
+    try { const r = await apiFetch('/analysis?limit=30'); if (r.ok) { const d = await r.json(); analyses = d.analyses.map(a => ({ id: a.id, shape: a.face_shape, confidence: a.confidence, styleMode: a.style_mode, photo: a.photo_path, date: new Date(a.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) })); } } catch {}
+  } else {
+    prompt.style.display = 'block';
+    analyses = JSON.parse(localStorage.getItem('hs_hist') || '[]');
+  }
+  document.getElementById('histCount').textContent = analyses.length + ' saved ' + (analyses.length === 1 ? 'analysis' : 'analyses');
+  if (!analyses.length) { grid.innerHTML = '<div class="no-hist">No analyses yet.<br>Run your first scan or take the quiz to build your history.</div>'; return; }
+  grid.innerHTML = analyses.map(a => {
+    const data = S[a.shape] || {};
+    const thumb = a.photo ? `<img src="${a.photo}" alt="face">` : `<div class="hph">${(data.name||'?')[0]}</div>`;
+    return `<div class="hcard">
+      <div class="hthumb">${thumb}<div class="hshape-tag">${data.name||a.shape}</div></div>
+      <div class="hbody"><div class="hdate">${a.date} · ${a.styleMode||'all'} styles · ${a.confidence}% confidence</div><div class="hrecs">Shape: <strong>${data.name||a.shape}</strong></div></div>
+      <div class="hactions">
+        <button class="hbtn" onclick="loadResult('${a.shape}',${a.confidence})">View</button>
+        <button class="hbtn del" onclick="delResult('${a.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function loadResult(shape, confidence) { currentResult = { shape, confidence }; switchPage('scan'); renderResults(shape, confidence, null); }
+async function delResult(id) {
+  if (auth.token) { try { await apiFetch('/analysis/' + id, { method: 'DELETE' }); } catch {} }
+  const hist = JSON.parse(localStorage.getItem('hs_hist') || '[]').filter(a => String(a.id) !== String(id));
+  localStorage.setItem('hs_hist', JSON.stringify(hist)); renderHistory(); toast('Analysis removed.');
+}
+function clearHist() { localStorage.removeItem('hs_hist'); renderHistory(); toast('Local history cleared.'); }
+
+function shareResult(shape, confidence) {
+  const txt = `My face shape is ${S[shape].name}! HairShape AI detected it with ${confidence}% confidence. Try it free at hairshape.ai`;
+  if (navigator.share) navigator.share({ title: 'My HairShape AI Result', text: txt });
+  else { navigator.clipboard?.writeText(txt); toast('Result copied to clipboard!'); }
+}
+function toast(msg) {
+  const t = document.getElementById('toast'); document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000);
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+window.addEventListener('load', () => {
+  try { const u = localStorage.getItem('hs_user'); if (u) { auth.user = JSON.parse(u); renderAuthHeader(); } } catch {}
+  setTimeout(() => drawGuide(false), 300);
+  const topStyles = CATALOG.filter(s => s.top).slice(0, 8);
+  setTimeout(() => topStyles.forEach(s => fetchPhoto(s)), 1000);
+});
+window.addEventListener('resize', () => { if (!cameraLive) setTimeout(() => drawGuide(false), 50); });
+</script>
+</body>
+</html>
